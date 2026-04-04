@@ -1,0 +1,29 @@
+# Environment variables (keep secrets out of git)
+.env
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# User data (local only)
+users.json
+signatures/
+
+# Uploaded files
+static/uploads/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
