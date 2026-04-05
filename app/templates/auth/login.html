@@ -27,7 +27,38 @@ body_class %}auth-page{% endblock %} {% block body %}
           data-bs-dismiss="alert"
         ></button>
       </div>
-      {% endfor %} {% endif %} {% endwith %} {# Monday.com OAuth #}
+      {% endfor %} {% endif %} {% endwith %} {# ── Email / Password login ── #}
+      <form method="POST" action="{{ url_for('auth.login') }}" class="mb-3">
+        <div class="mb-2">
+          <input
+            type="email"
+            name="email"
+            class="form-control"
+            placeholder="Email address"
+            required
+            autocomplete="email"
+          />
+        </div>
+        <div class="mb-3">
+          <input
+            type="password"
+            name="password"
+            class="form-control"
+            placeholder="Password"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Sign In</button>
+      </form>
+
+      <div class="d-flex align-items-center my-3">
+        <hr class="flex-grow-1" />
+        <span class="px-2 text-muted" style="font-size: 0.8rem">or</span>
+        <hr class="flex-grow-1" />
+      </div>
+
+      {# Monday.com OAuth #}
       <a href="{{ url_for('auth.monday_login') }}" class="btn-oauth btn-monday">
         <svg
           width="18"
@@ -72,8 +103,8 @@ body_class %}auth-page{% endblock %} {% block body %}
         class="auth-footer-note text-muted text-center"
         style="font-size: 0.82rem; margin-top: 0.5rem"
       >
-        Use your <strong>@mcbtsi.com</strong> Monday.com or Google account to
-        sign in.
+        Use your account credentials or <strong>@mcbtsi.com</strong> Monday.com
+        / Google account.
       </p>
     </div>
   </div>

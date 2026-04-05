@@ -9,6 +9,7 @@ from flask import (
     url_for, flash, session,
 )
 from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from ..extensions import oauth
 from ..models import User
@@ -24,18 +25,113 @@ def _is_allowed_email(email: str) -> bool:
     return email.strip().lower().endswith(f"@{ALLOWED_DOMAIN}")
 
 
-# ── Traditional login / signup ────────────────────────────────────────────────
+# ── Password login / signup ───────────────────────────────────────────────────
 
 @auth_bp.route("/signup")
 def signup():
-    """Signup is handled via OAuth — redirect straight to login."""
+    """Signup is handled via OAuth or admin — redirect straight to login."""
     return redirect(url_for("auth.login"))
 
 
-@auth_bp.route("/login")
+@auth_bp.route("/login", methods=["GET", "POST"])
 def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        users = read_users()
+        user_data = next(
+            (u for u in users if u.get("username", "").lower() == email or u.get("email", "").lower() == email),
+            None,
+        )
+        if user_data and user_data.get("password") and check_password_hash(user_data["password"], password):
+            session.permanent = True
+            login_user(User(user_data["username"], user_data.get("name", email)), remember=True)
+            flash(f"Welcome, {user_data.get('name', email)}!", "success")
+            return redirect(url_for("main.index"))
+        flash("Invalid email or password.", "error")
+        return redirect(url_for("auth.login"))
+
     google_enabled = bool(os.getenv("GOOGLE_CLIENT_ID") and os.getenv("GOOGLE_CLIENT_SECRET"))
     return render_template("auth/login.html", google_enabled=google_enabled)
+
+
+# ── Admin user management ─────────────────────────────────────────────────────
+
+@auth_bp.route("/admin/users", methods=["GET", "POST"])
+def admin_users():
+    admin_password = os.getenv("ADMIN_PASSWORD", "")
+    if not admin_password:
+        flash("Admin access is not configured.", "error")
+        return redirect(url_for("auth.login"))
+
+    # Simple session-based admin auth
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        # Admin login
+        if action == "admin_login":
+            if request.form.get("admin_password") == admin_password:
+                session["is_admin"] = True
+            else:
+                flash("Incorrect admin password.", "error")
+            return redirect(url_for("auth.admin_users"))
+
+        if not session.get("is_admin"):
+            flash("Admin authentication required.", "error")
+            return redirect(url_for("auth.admin_users"))
+
+        # Create user
+        if action == "create_user":
+            name = request.form.get("name", "").strip()
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
+            if not name or not email or not password:
+                flash("Name, email, and password are all required.", "error")
+                return redirect(url_for("auth.admin_users"))
+            users = read_users()
+            if any(u.get("username") == email for u in users):
+                flash(f"User {email} already exists.", "error")
+                return redirect(url_for("auth.admin_users"))
+            users.append({
+                "username": email, "email": email, "name": name,
+                "provider": "password",
+                "password": generate_password_hash(password),
+            })
+            write_users(users)
+            flash(f"User {email} created successfully.", "success")
+            return redirect(url_for("auth.admin_users"))
+
+        # Delete user
+        if action == "delete_user":
+            email = request.form.get("email", "").strip().lower()
+            users = read_users()
+            users = [u for u in users if u.get("username") != email]
+            write_users(users)
+            flash(f"User {email} deleted.", "success")
+            return redirect(url_for("auth.admin_users"))
+
+        # Reset password
+        if action == "reset_password":
+            email = request.form.get("email", "").strip().lower()
+            new_password = request.form.get("new_password", "")
+            if not new_password:
+                flash("New password cannot be empty.", "error")
+                return redirect(url_for("auth.admin_users"))
+            users = read_users()
+            user_data = next((u for u in users if u.get("username") == email), None)
+            if not user_data:
+                flash(f"User {email} not found.", "error")
+                return redirect(url_for("auth.admin_users"))
+            user_data["password"] = generate_password_hash(new_password)
+            write_users(users)
+            flash(f"Password reset for {email}.", "success")
+            return redirect(url_for("auth.admin_users"))
+
+    if not session.get("is_admin"):
+        return render_template("auth/admin_login.html")
+
+    users = read_users()
+    return render_template("auth/admin_users.html", users=users)
 
 
 @auth_bp.route("/logout")
