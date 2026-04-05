@@ -1,37 +1,89 @@
-{% extends "base.html" %}
-{% block title %}User Management{% endblock %}
-{% block body %}
-<div class="container py-4" style="max-width: 860px;">
+{% extends "base.html" %} {% block title %}User Management{% endblock %} {%
+block body %}
+<div class="container py-4" style="max-width: 860px">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">User Management</h4>
-    <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-outline-secondary">← Back to login</a>
+    <a
+      href="{{ url_for('auth.login') }}"
+      class="btn btn-sm btn-outline-secondary"
+      >← Back to login</a
+    >
   </div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if
+  messages %} {% for category, message in messages %}
+  <div
+    class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
+  >
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %} {% endif %} {% endwith %} {# ── Sync from Monday.com ── #}
+  <div class="card mb-4 border-success">
+    <div class="card-header fw-semibold text-success">
+      Sync Users from Monday.com
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-2" style="font-size: 0.88rem">
+        Imports all Monday.com account members into the portal. Each new user
+        gets the <strong>DEFAULT_USER_PASSWORD</strong> as their initial
+        password. Set <code>DEFAULT_USER_PASSWORD</code> in your Render
+        environment variables first.
+      </p>
+      <form
+        method="POST"
+        action="{{ url_for('auth.admin_users') }}"
+        onsubmit="
+          return confirm(
+            'This will import all Monday.com users and assign them the DEFAULT_USER_PASSWORD. Continue?',
+          );
+        "
+      >
+        <input type="hidden" name="action" value="sync_monday" />
+        <button type="submit" class="btn btn-success">
+          ⟳ Sync from Monday.com
+        </button>
+      </form>
+    </div>
+  </div>
 
   {# ── Create user ── #}
   <div class="card mb-4">
     <div class="card-header fw-semibold">Create New User</div>
     <div class="card-body">
-      <form method="POST" action="{{ url_for('auth.admin_users') }}" class="row g-2">
+      <form
+        method="POST"
+        action="{{ url_for('auth.admin_users') }}"
+        class="row g-2"
+      >
         <input type="hidden" name="action" value="create_user" />
         <div class="col-md-4">
-          <input type="text" name="name" class="form-control" placeholder="Full name" required />
+          <input
+            type="text"
+            name="name"
+            class="form-control"
+            placeholder="Full name"
+            required
+          />
         </div>
         <div class="col-md-4">
-          <input type="email" name="email" class="form-control" placeholder="Email address" required />
+          <input
+            type="email"
+            name="email"
+            class="form-control"
+            placeholder="Email address"
+            required
+          />
         </div>
         <div class="col-md-3">
-          <input type="password" name="password" class="form-control" placeholder="Password" required autocomplete="new-password" />
+          <input
+            type="password"
+            name="password"
+            class="form-control"
+            placeholder="Password"
+            required
+            autocomplete="new-password"
+          />
         </div>
         <div class="col-md-1">
           <button type="submit" class="btn btn-primary w-100">Add</button>
@@ -42,7 +94,9 @@
 
   {# ── Users table ── #}
   <div class="card">
-    <div class="card-header fw-semibold">Existing Users ({{ users | length }})</div>
+    <div class="card-header fw-semibold">
+      Existing Users ({{ users | length }})
+    </div>
     <div class="card-body p-0">
       <table class="table table-hover mb-0">
         <thead class="table-light">
@@ -59,29 +113,47 @@
             <td>{{ user.get('name', '—') }}</td>
             <td>{{ user.get('email', user.get('username', '—')) }}</td>
             <td>
-              <span class="badge bg-{{ 'warning text-dark' if user.get('provider') == 'monday' else ('info text-dark' if user.get('provider') == 'google' else 'secondary') }}">
+              <span
+                class="badge bg-{{ 'warning text-dark' if user.get('provider') == 'monday' else ('info text-dark' if user.get('provider') == 'google' else 'secondary') }}"
+              >
                 {{ user.get('provider', 'password') }}
               </span>
             </td>
             <td>
               {# Reset password #}
-              <button class="btn btn-sm btn-outline-secondary me-1"
+              <button
+                class="btn btn-sm btn-outline-secondary me-1"
                 data-bs-toggle="modal"
                 data-bs-target="#resetModal"
-                data-email="{{ user.get('username') }}">
+                data-email="{{ user.get('username') }}"
+              >
                 Reset PW
               </button>
               {# Delete #}
-              <form method="POST" action="{{ url_for('auth.admin_users') }}" class="d-inline"
-                onsubmit="return confirm('Delete {{ user.get('email', user.get('username')) }}?')">
+              <form
+                method="POST"
+                action="{{ url_for('auth.admin_users') }}"
+                class="d-inline"
+                onsubmit="return confirm('Delete {{ user.get('email', user.get('username')) }}?')"
+              >
                 <input type="hidden" name="action" value="delete_user" />
-                <input type="hidden" name="email" value="{{ user.get('username') }}" />
-                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                <input
+                  type="hidden"
+                  name="email"
+                  value="{{ user.get('username') }}"
+                />
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                  Delete
+                </button>
               </form>
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="4" class="text-center text-muted py-3">No users yet.</td></tr>
+          <tr>
+            <td colspan="4" class="text-center text-muted py-3">
+              No users yet.
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -97,15 +169,34 @@
         <input type="hidden" name="action" value="reset_password" />
         <div class="modal-header">
           <h6 class="modal-title">Reset Password</h6>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
         </div>
         <div class="modal-body">
           <input type="hidden" name="email" id="resetEmail" />
-          <p class="text-muted mb-2" style="font-size:0.85rem">Resetting password for: <strong id="resetEmailLabel"></strong></p>
-          <input type="password" name="new_password" class="form-control" placeholder="New password" required autocomplete="new-password" />
+          <p class="text-muted mb-2" style="font-size: 0.85rem">
+            Resetting password for: <strong id="resetEmailLabel"></strong>
+          </p>
+          <input
+            type="password"
+            name="new_password"
+            class="form-control"
+            placeholder="New password"
+            required
+            autocomplete="new-password"
+          />
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </button>
           <button type="submit" class="btn btn-sm btn-primary">Reset</button>
         </div>
       </form>
@@ -114,10 +205,12 @@
 </div>
 
 <script>
-  document.getElementById('resetModal').addEventListener('show.bs.modal', function(e) {
-    const email = e.relatedTarget.dataset.email;
-    document.getElementById('resetEmail').value = email;
-    document.getElementById('resetEmailLabel').textContent = email;
-  });
+  document
+    .getElementById("resetModal")
+    .addEventListener("show.bs.modal", function (e) {
+      const email = e.relatedTarget.dataset.email;
+      document.getElementById("resetEmail").value = email;
+      document.getElementById("resetEmailLabel").textContent = email;
+    });
 </script>
 {% endblock %}

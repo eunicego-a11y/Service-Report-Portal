@@ -127,6 +127,50 @@ def admin_users():
             flash(f"Password reset for {email}.", "success")
             return redirect(url_for("auth.admin_users"))
 
+        # Sync from Monday.com
+        if action == "sync_monday":
+            default_pw = os.getenv("DEFAULT_USER_PASSWORD", "")
+            if not default_pw:
+                flash("Set DEFAULT_USER_PASSWORD in environment variables first.", "error")
+                return redirect(url_for("auth.admin_users"))
+            api_key = os.getenv("MONDAY_API_KEY", "")
+            if not api_key:
+                flash("MONDAY_API_KEY is not configured.", "error")
+                return redirect(url_for("auth.admin_users"))
+            try:
+                resp = requests.post(
+                    "https://api.monday.com/v2",
+                    json={"query": "{ users { id name email } }"},
+                    headers={"Authorization": api_key, "Content-Type": "application/json"},
+                    timeout=15,
+                )
+                resp.raise_for_status()
+                monday_users = resp.json().get("data", {}).get("users", [])
+            except Exception as e:
+                flash(f"Failed to fetch Monday.com users: {e}", "error")
+                return redirect(url_for("auth.admin_users"))
+
+            users = read_users()
+            existing = {u.get("username") for u in users}
+            added = 0
+            hashed_pw = generate_password_hash(default_pw)
+            for mu in monday_users:
+                email = (mu.get("email") or "").strip().lower()
+                if not email or email in existing:
+                    continue
+                users.append({
+                    "username": email, "email": email,
+                    "name": mu.get("name") or email,
+                    "monday_id": str(mu.get("id", "")),
+                    "provider": "password",
+                    "password": hashed_pw,
+                })
+                existing.add(email)
+                added += 1
+            write_users(users)
+            flash(f"Synced {added} new users from Monday.com. Default password set.", "success")
+            return redirect(url_for("auth.admin_users"))
+
     if not session.get("is_admin"):
         return render_template("auth/admin_login.html")
 
