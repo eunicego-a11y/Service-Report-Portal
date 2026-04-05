@@ -16,13 +16,15 @@ FILE_URL = "https://api.monday.com/v2/file"
 _HEADERS = {"Authorization": API_KEY, "API-Version": "2023-10"}
 
 
-def graphql(query: str, variables: dict | None = None) -> dict:
-    """Execute a Monday.com GraphQL query/mutation."""
+def graphql(query: str, variables: dict | None = None, api_key: str | None = None) -> dict:
+    """Execute a Monday.com GraphQL query/mutation.
+    Pass api_key to use a specific user's token instead of the admin key.
+    """
     payload = {"query": query}
     if variables:
         payload["variables"] = variables
-    # Re-read API key at call time in case .env was loaded after import
-    headers = {"Authorization": os.getenv("MONDAY_API_KEY", API_KEY), "API-Version": "2023-10"}
+    key = api_key or os.getenv("MONDAY_API_KEY", API_KEY)
+    headers = {"Authorization": key, "API-Version": "2023-10"}
     try:
         resp = requests.post(URL, json=payload, headers=headers, timeout=15)
         result = resp.json()
@@ -32,7 +34,7 @@ def graphql(query: str, variables: dict | None = None) -> dict:
         return {}
 
 
-def upload_file(item_id: str, column_id: str, file_data: bytes, filename: str) -> tuple[bool, str]:
+def upload_file(item_id: str, column_id: str, file_data: bytes, filename: str, api_key: str | None = None) -> tuple[bool, str]:
     """
     Upload binary PNG data to a Monday.com file/signature column.
     Returns (success: bool, file_id_or_error: str).
@@ -43,7 +45,8 @@ def upload_file(item_id: str, column_id: str, file_data: bytes, filename: str) -
             'mutation ($file: File!) { add_file_to_column '
             f'(item_id: {item_id}, column_id: "{column_id}", file: $file) {{ id }} }}'
         )
-        headers = {"Authorization": os.getenv("MONDAY_API_KEY", API_KEY), "API-Version": "2023-10"}
+        key = api_key or os.getenv("MONDAY_API_KEY", API_KEY)
+        headers = {"Authorization": key, "API-Version": "2023-10"}
         res = requests.post(
             FILE_URL,
             headers=headers,

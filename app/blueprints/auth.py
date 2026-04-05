@@ -45,6 +45,9 @@ def login():
         )
         if user_data and user_data.get("password") and check_password_hash(user_data["password"], password):
             session.permanent = True
+            # Load stored personal Monday.com API token into session if available
+            if user_data.get("monday_api_token"):
+                session["monday_token"] = user_data["monday_api_token"]
             login_user(User(user_data["username"], user_data.get("name", email)), remember=True)
             flash(f"Welcome, {user_data.get('name', email)}!", "success")
             return redirect(url_for("main.index"))
@@ -53,6 +56,25 @@ def login():
 
     google_enabled = bool(os.getenv("GOOGLE_CLIENT_ID") and os.getenv("GOOGLE_CLIENT_SECRET"))
     return render_template("auth/login.html", google_enabled=google_enabled)
+
+
+# ── Profile ──────────────────────────────────────────────────────────────────
+
+@auth_bp.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    users = read_users()
+    user_data = next((u for u in users if u.get("username") == current_user.id), None)
+    if request.method == "POST":
+        token = request.form.get("monday_api_token", "").strip()
+        if user_data is not None:
+            user_data["monday_api_token"] = token
+            write_users(users)
+            session["monday_token"] = token or None
+            flash("Monday.com API token saved. Items will now be created under your account.", "success")
+        return redirect(url_for("auth.profile"))
+    stored_token = (user_data or {}).get("monday_api_token", "") if user_data else ""
+    return render_template("auth/profile.html", has_token=bool(stored_token))
 
 
 # ── Admin user management ─────────────────────────────────────────────────────

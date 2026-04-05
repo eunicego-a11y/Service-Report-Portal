@@ -1,7 +1,7 @@
 import os
 import traceback
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from flask_login import login_required
 
 from .. import monday
@@ -86,7 +86,8 @@ def upload_signature():
             return jsonify({"success": False, "error": "File too small — likely empty signature"}), 400
 
         filename = f"{sig_key}_{item_id}.png"
-        success, result = monday.upload_file(item_id, column_id, file_data, filename)
+        user_token = session.get("monday_token") or None
+        success, result = monday.upload_file(item_id, column_id, file_data, filename, api_key=user_token)
 
         if success:
             return jsonify({"success": True, "file_id": result})

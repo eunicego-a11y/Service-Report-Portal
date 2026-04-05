@@ -121,7 +121,8 @@ def submit():
             "columnVals": json.dumps(column_values),
         }
 
-        res = monday.graphql(create_query, gql_vars)
+        user_token = session.get("monday_token") or None
+        res = monday.graphql(create_query, gql_vars, api_key=user_token)
         res = res or {}
 
         if res.get("errors"):
@@ -150,7 +151,7 @@ def submit():
                     "boardId": monday.MAIN_BOARD,
                     "colId": workwith_col_id,
                     "val": json.dumps({"personsAndTeams": persons_and_teams}),
-                })
+                }, api_key=user_token)
                 if (up_res or {}).get("errors"):
                     print(f"[WORKWITH] update error: {up_res['errors']}")
                 else:
