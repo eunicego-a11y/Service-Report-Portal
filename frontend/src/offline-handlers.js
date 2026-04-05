@@ -96,6 +96,15 @@ async function handleSaveDraft(e) {
           if (item.id) formData.append("tsp_workwith", item.id);
         }
       }
+
+      const assignedEl = window.$("#field-assigned");
+      if (assignedEl.length) {
+        formData.delete("tsp_assigned");
+        const selectedAssigned = assignedEl.select2("data") || [];
+        for (const item of selectedAssigned) {
+          if (item.id) formData.append("tsp_assigned", item.id);
+        }
+      }
     }
 
     // Build draft object

@@ -155,6 +155,20 @@ async function handleSubmit(e) {
           formData.getAll("tsp_workwith"),
         );
       }
+
+      const assignedEl = window.$("#field-assigned");
+      if (assignedEl.length) {
+        formData.delete("tsp_assigned");
+        const selectedAssigned = assignedEl.select2("data") || [];
+        console.log("[ASSIGNED] select2 data:", selectedAssigned);
+        for (const item of selectedAssigned) {
+          if (item.id) formData.append("tsp_assigned", item.id);
+        }
+        console.log(
+          "[ASSIGNED] FormData tsp_assigned:",
+          formData.getAll("tsp_assigned"),
+        );
+      }
     }
 
     const res = await fetch("/submit", {

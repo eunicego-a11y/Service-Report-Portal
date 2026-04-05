@@ -100,6 +100,24 @@ async function handleSaveDraft(e) {
           );
         }
       }
+
+      const assignedEl = window.$("#field-assigned");
+      if (assignedEl.length) {
+        formData.delete("tsp_assigned");
+        const selectedAssigned = assignedEl.select2("data") || [];
+        for (const item of selectedAssigned) {
+          if (item.id) formData.append("tsp_assigned", item.id);
+        }
+        // Save display data for restoration
+        if (selectedAssigned.length) {
+          formData.set(
+            "_tsp_assigned_data",
+            JSON.stringify(
+              selectedAssigned.map((i) => ({ id: i.id, text: i.text || i.id })),
+            ),
+          );
+        }
+      }
       // Save Service Request display text for restoration
       const linkedEl = window.$("select[name='linked_item_id']");
       if (linkedEl.length) {
