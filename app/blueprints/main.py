@@ -58,20 +58,27 @@ def submit():
             return _submit_response(False, "Please select a Service Request.")
 
         # ── Extract TSP WORKWITH IDs from raw form data ───────────────
-        # Collect every value named tsp_workwith regardless of how the
-        # frontend sent it (Select2 multi-value, comma-separated string, etc.)
         raw_workwith = request.form.getlist("tsp_workwith")
         print(f"[WORKWITH] getlist result: {raw_workwith!r}")
         print(f"[WORKWITH] full form keys: {list(request.form.keys())}")
 
         workwith_ids: list[int] = []
         for v in raw_workwith:
-            # Each value may itself be comma-separated
             for part in str(v).split(","):
                 part = part.strip()
                 if part.isdigit():
                     workwith_ids.append(int(part))
         print(f"[WORKWITH] parsed person IDs: {workwith_ids!r}")
+
+        # ── Extract TSP ASSIGNED IDs ──────────────────────────────────
+        raw_assigned = request.form.getlist("tsp_assigned")
+        assigned_ids: list[int] = []
+        for v in raw_assigned:
+            for part in str(v).split(","):
+                part = part.strip()
+                if part.isdigit():
+                    assigned_ids.append(int(part))
+        print(f"[ASSIGNED] parsed person IDs: {assigned_ids!r}")
 
         form_data = {
             "COL_SERVICE_REQUEST": linked_id,
@@ -104,11 +111,16 @@ def submit():
             if formatted is not None:
                 column_values[col_id] = formatted
 
-        # Include people column in create_item if we have IDs
+        # Include people columns in create_item if we have IDs
         workwith_col_id = os.getenv("COL_TSP_WORKWITH")
         if workwith_ids and workwith_col_id:
             column_values[workwith_col_id] = {"personsIds": workwith_ids}
             print(f"[WORKWITH] included in create_item: {workwith_col_id} = {{'personsIds': {workwith_ids}}}")
+
+        assigned_col_id = os.getenv("COL_TSP_ASSIGNED")
+        if assigned_ids and assigned_col_id:
+            column_values[assigned_col_id] = {"personsIds": assigned_ids}
+            print(f"[ASSIGNED] included in create_item: {assigned_col_id} = {{'personsIds': {assigned_ids}}}")
 
         create_query = """
         mutation ($boardId: ID!, $itemName: String!, $columnVals: JSON!) {
@@ -156,6 +168,26 @@ def submit():
                     print(f"[WORKWITH] update error: {up_res['errors']}")
                 else:
                     print(f"[WORKWITH] update OK — personsIds={workwith_ids} on item {item_id}")
+
+            # Guaranteed update for TSP ASSIGNED
+            if assigned_ids and assigned_col_id:
+                update_q = """
+                mutation ($itemId: ID!, $boardId: ID!, $colId: String!, $val: JSON!) {
+                    change_column_value(item_id: $itemId, board_id: $boardId,
+                        column_id: $colId, value: $val) { id }
+                }
+                """
+                persons_and_teams = [{"id": uid, "kind": "person"} for uid in assigned_ids]
+                up_res = monday.graphql(update_q, {
+                    "itemId": item_id,
+                    "boardId": monday.MAIN_BOARD,
+                    "colId": assigned_col_id,
+                    "val": json.dumps({"personsAndTeams": persons_and_teams}),
+                }, api_key=user_token)
+                if (up_res or {}).get("errors"):
+                    print(f"[ASSIGNED] update error: {up_res['errors']}")
+                else:
+                    print(f"[ASSIGNED] update OK — personsIds={assigned_ids} on item {item_id}")
 
             # Record locally so "My Recent Submissions" always works
             if current_user.is_authenticated:

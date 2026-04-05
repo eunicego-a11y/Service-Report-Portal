@@ -56,7 +56,7 @@
           </div>
           <div class="form-card-body">
             <div class="row g-3">
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="form-label" for="field-name"
                   >Item Name / Reference
                   <span class="text-danger">*</span></label
@@ -70,7 +70,7 @@
                   required
                 />
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="form-label" for="field-linked"
                   >Service Request Number
                   <span class="text-danger">*</span></label
@@ -83,6 +83,17 @@
                 >
                   <option value="">Search and select…</option>
                 </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="field-assigned"
+                  >TSP Assigned</label
+                >
+                <select
+                  id="field-assigned"
+                  name="tsp_assigned"
+                  class="form-select people-picker"
+                  multiple
+                ></select>
               </div>
             </div>
           </div>
