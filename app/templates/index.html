@@ -1,0 +1,520 @@
+{% extends "base.html" %} {% block title %}Service Report Portal{% endblock %}
+{% block body %} {# ── NAVBAR ── #}
+<nav class="app-navbar" role="navigation" aria-label="Main navigation">
+  <a class="brand" href="#">
+    <img
+      src="{{ url_for('static', filename='MCBIO-Logo.png') }}"
+      alt="MC BioTechnical Solutions"
+    />
+    <div>
+      <div class="brand-text">Service Report Portal</div>
+      <div class="brand-sub">MC BioTechnical Solutions Inc.</div>
+    </div>
+  </a>
+  <div class="nav-actions">
+    <span
+      id="pendingBadge"
+      class="badge bg-warning text-dark"
+      style="display: none"
+      >0 pending</span
+    >
+    <span class="text-white-50 small d-none d-md-inline">
+      {{ current_user.name if current_user.is_authenticated else '' }}
+    </span>
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-logout">Sign Out</a>
+  </div>
+</nav>
+
+<div class="page-wrapper">
+  {# ── Flash Messages ── #}
+  <div class="alerts-area" role="alert" aria-live="polite">
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, message in messages %}
+    <div
+      class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
+    >
+      {{ message }}
+      <button
+        type="button"
+        class="btn-close"
+        data-bs-dismiss="alert"
+        aria-label="Close"
+      ></button>
+    </div>
+    {% endfor %} {% endif %} {% endwith %}
+  </div>
+
+  <div class="row g-4">
+    {# ══════════════════ MAIN FORM ══════════════════ #}
+    <div class="col-lg-8">
+      <form id="mainForm" novalidate>
+        {# 1 · Basic Information #}
+        <div class="form-card">
+          <div class="form-card-header">
+            <div class="section-icon" aria-hidden="true">1</div>
+            <h6>Basic Information</h6>
+          </div>
+          <div class="form-card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="field-name"
+                  >Item Name / Reference
+                  <span class="text-danger">*</span></label
+                >
+                <input
+                  type="text"
+                  id="field-name"
+                  name="name"
+                  class="form-control"
+                  placeholder="e.g. Service Call #101"
+                  required
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="field-linked"
+                  >Service Request Number
+                  <span class="text-danger">*</span></label
+                >
+                <select
+                  id="field-linked"
+                  name="linked_item_id"
+                  class="form-select"
+                  required
+                >
+                  <option value="">Search and select…</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# 2 · Contact Information #}
+        <div class="form-card">
+          <div class="form-card-header">
+            <div class="section-icon" aria-hidden="true">2</div>
+            <h6>Contact Information</h6>
+          </div>
+          <div class="form-card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="field-email"
+                  >Service Email (TSP) <span class="text-danger">*</span></label
+                >
+                <input
+                  type="email"
+                  id="field-email"
+                  name="email"
+                  class="form-control"
+                  placeholder="service@mcbtsi.com"
+                  required
+                />
+              </div>
+            </div>
+            <div class="info-note mt-3">
+              Customer name, email, and BIOMED info will be auto-populated from
+              the selected Service Request.
+            </div>
+          </div>
+        </div>
+
+        {# 3 · Service Details #}
+        <div class="form-card">
+          <div class="form-card-header">
+            <div class="section-icon" aria-hidden="true">3</div>
+            <h6>Service Details</h6>
+          </div>
+          <div class="form-card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="field-status">Status</label>
+                <select id="field-status" name="status" class="form-select">
+                  <option value="">Select status…</option>
+                  <option value="5">OPEN</option>
+                  <option value="0">In-Progress</option>
+                  <option value="1">Completed</option>
+                  <option value="4">For Continuation</option>
+                  <option value="3">For Escalation</option>
+                  <option value="2">Rejected</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="field-machine-system"
+                  >Machine System</label
+                >
+                <select
+                  id="field-machine-system"
+                  name="machine_system"
+                  class="form-select machine-picker"
+                >
+                  <option value="">Select machine system…</option>
+                  <option value="1">UF-4000</option>
+                  <option value="6">XN-1500</option>
+                  <option value="13">XR-1500</option>
+                  <option value="0">UC-3500</option>
+                  <option value="8">UN-2000</option>
+                  <option value="14">Stand Alone</option>
+                  <option value="2">XN-9000</option>
+                  <option value="9">N/A</option>
+                  <option value="15">Project based</option>
+                  <option value="3">XN-3000</option>
+                  <option value="10">UD-10</option>
+                  <option value="16">Laptower set</option>
+                  <option value="7">UN-3000</option>
+                  <option value="11">UF-5000</option>
+                  <option value="4">XN-2000</option>
+                  <option value="12">XR-2000</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="field-serial"
+                  >Serial Number</label
+                >
+                <input
+                  type="text"
+                  id="field-serial"
+                  name="serial_number"
+                  class="form-control"
+                  placeholder="e.g. SN-0012345"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# 4 · Service Dates #}
+        <div class="form-card">
+          <div class="form-card-header">
+            <div class="section-icon" aria-hidden="true">4</div>
+            <h6>Service Dates &amp; Times</h6>
+          </div>
+          <div class="form-card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="field-svc-start"
+                  >Service Start</label
+                >
+                <input
+                  type="datetime-local"
+                  id="field-svc-start"
+                  name="service_start"
+                  class="form-control"
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="field-svc-end"
+                  >Service End</label
+                >
+                <input
+                  type="datetime-local"
+                  id="field-svc-end"
+                  name="service_end"
+                  class="form-control"
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="field-login"
+                  >Log-In Date &amp; Time</label
+                >
+                <input
+                  type="datetime-local"
+                  id="field-login"
+                  name="login_date"
+                  class="form-control"
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="field-logout"
+                  >Log-Out Date &amp; Time</label
+                >
+                <input
+                  type="datetime-local"
+                  id="field-logout"
+                  name="logout_date"
+                  class="form-control"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# 5 · Service Information #}
+        <div class="form-card">
+          <div class="form-card-header">
+            <div class="section-icon" aria-hidden="true">5</div>
+            <h6>Service Information</h6>
+          </div>
+          <div class="form-card-body">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label" for="field-problems"
+                  >Problems and Concerns</label
+                >
+                <textarea
+                  id="field-problems"
+                  name="problems"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Describe the issue…"
+                ></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="field-job">Job Done</label>
+                <textarea
+                  id="field-job"
+                  name="job_done"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Describe work completed…"
+                ></textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="field-parts"
+                  >Parts Replaced</label
+                >
+                <input
+                  type="text"
+                  id="field-parts"
+                  name="parts_replaced"
+                  class="form-control"
+                  placeholder="List parts replaced…"
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="field-workwith"
+                  >TSP WORKWITH (Additional Technicians)</label
+                >
+                <select
+                  id="field-workwith"
+                  name="tsp_workwith"
+                  class="form-select people-picker"
+                  multiple
+                ></select>
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="field-rec">Recommendation</label>
+                <textarea
+                  id="field-rec"
+                  name="recommendation"
+                  class="form-control"
+                  rows="2"
+                  placeholder="Recommendations for follow-up…"
+                ></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="field-remarks">Remarks</label>
+                <textarea
+                  id="field-remarks"
+                  name="remarks"
+                  class="form-control"
+                  rows="2"
+                  placeholder="Additional notes…"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# 6 · Signatures #}
+        <div class="form-card">
+          <div class="form-card-header">
+            <div class="section-icon" aria-hidden="true">6</div>
+            <h6>Signatures</h6>
+          </div>
+          <div class="form-card-body">
+            <div class="row g-3" id="signaturePads">
+              {# Populated by signatures.js #}
+            </div>
+          </div>
+        </div>
+
+        {# ─── TABBED INTERFACE ─── #}
+        <ul
+          class="nav nav-tabs mb-3"
+          role="tablist"
+          style="border-bottom: 2px solid #dee2e6"
+        >
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link active"
+              id="tab-form"
+              data-bs-toggle="tab"
+              data-bs-target="#tabpane-form"
+              type="button"
+              role="tab"
+              aria-controls="tabpane-form"
+              aria-selected="true"
+            >
+              📝 Fill Report
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="tab-drafts"
+              data-bs-toggle="tab"
+              data-bs-target="#tabpane-drafts"
+              type="button"
+              role="tab"
+              aria-controls="tabpane-drafts"
+              aria-selected="false"
+            >
+              <span id="drafts-count" class="badge bg-info me-1">0</span>My
+              Drafts
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="tab-submissions"
+              data-bs-toggle="tab"
+              data-bs-target="#tabpane-submissions"
+              type="button"
+              role="tab"
+              aria-controls="tabpane-submissions"
+              aria-selected="false"
+            >
+              <span id="submissions-count" class="badge bg-success me-1">0</span
+              >Pending Syncs
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          {# TAB 1: Fill Report #}
+          <div
+            class="tab-pane fade show active"
+            id="tabpane-form"
+            role="tabpanel"
+            aria-labelledby="tab-form"
+          >
+            <div
+              class="alert alert-info alert-dismissible fade show"
+              role="alert"
+            >
+              <strong>💾 Offline-Ready!</strong> Save your work as a draft
+              anytime. Forms are saved locally and will sync to Monday.com when
+              you're online.
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close"
+              ></button>
+            </div>
+
+            <div class="submit-area">
+              <div class="d-grid gap-2 d-sm-flex">
+                <button
+                  type="button"
+                  data-action="save-draft"
+                  id="saveDraftBtn"
+                  class="btn btn-outline-secondary btn-lg"
+                >
+                  <i class="fas fa-save"></i> Save Draft
+                </button>
+                <button
+                  id="submitBtn"
+                  type="submit"
+                  class="btn btn-success btn-lg"
+                >
+                  <i class="fas fa-paper-plane"></i> Submit
+                </button>
+              </div>
+
+              <div
+                id="uploadStatus"
+                class="upload-status"
+                role="status"
+                aria-live="polite"
+                style="display: none; margin-top: 1rem"
+              ></div>
+            </div>
+          </div>
+
+          {# TAB 2: My Drafts #}
+          <div
+            class="tab-pane fade"
+            id="tabpane-drafts"
+            role="tabpanel"
+            aria-labelledby="tab-drafts"
+          >
+            <div class="alert alert-info alert-sm" style="font-size: 0.9rem">
+              <strong>Note:</strong> Drafts are saved in your browser and not
+              yet submitted to Monday.com.
+            </div>
+            <div id="draftsList" class="list-group">
+              <p class="text-muted text-center py-4">
+                <i class="fas fa-inbox"></i> No drafts saved yet.
+              </p>
+            </div>
+          </div>
+
+          {# TAB 3: Pending Syncs #}
+          <div
+            class="tab-pane fade"
+            id="tabpane-submissions"
+            role="tabpanel"
+            aria-labelledby="tab-submissions"
+          >
+            <div class="alert alert-info alert-sm" style="font-size: 0.9rem">
+              <strong>Note:</strong> Submitted forms sync to Monday.com
+              automatically when you're online.
+            </div>
+            <div id="submissionsList" class="list-group">
+              <p class="text-muted text-center py-4">
+                <i class="fas fa-check-circle"></i> No submissions yet.
+              </p>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+    {# /col-lg-8 #} {# ══════════════════ SIDEBAR ══════════════════ #}
+    <div class="col-lg-4 sidebar-sticky">
+      {# Recent Submissions #}
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">My Recent Submissions</div>
+        <div class="sidebar-card-body">
+          {% for item in logs %}
+          <div class="log-item">
+            <span class="log-name" title="{{ item.name }}"
+              >{{ item.name }}</span
+            >
+            <span class="log-date">{{ item.created_at[:10] }}</span>
+          </div>
+          {% else %}
+          <div class="log-empty">No submissions found for your account.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Pending Signatures (shown by JS when queue is non-empty) #}
+      <div
+        class="sidebar-card"
+        id="pendingCard"
+        style="display: none"
+        aria-live="polite"
+      >
+        <div class="pending-card-header">&#9888; Pending Signatures</div>
+        <div class="pending-card-body">
+          <div id="pendingList" class="small mb-3"></div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-warning btn-sm" id="syncBtn">
+              Sync Now
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-danger btn-sm"
+              id="clearPendingBtn"
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {# /col-lg-4 #}
+  </div>
+  {# /row #}
+</div>
+{# /page-wrapper #} {% endblock %}
