@@ -119,19 +119,23 @@ def submit():
         # Include people columns in create_item if we have IDs
         workwith_col_id = os.getenv("COL_TSP_WORKWITH")
         if workwith_ids and workwith_col_id:
-            column_values[workwith_col_id] = {"personsIds": workwith_ids}
-            print(f"[WORKWITH] included in create_item: {workwith_col_id} = {{'personsIds': {workwith_ids}}}")
+            persons_and_teams = [{"id": uid, "kind": "person"} for uid in workwith_ids]
+            column_values[workwith_col_id] = {"personsAndTeams": persons_and_teams}
+            print(f"[WORKWITH] included in create_item: {workwith_col_id} = {{'personsAndTeams': {persons_and_teams}}}")
 
         assigned_col_id = os.getenv("COL_TSP_ASSIGNED")
         if assigned_ids and assigned_col_id:
-            column_values[assigned_col_id] = {"personsIds": assigned_ids}
-            print(f"[ASSIGNED] included in create_item: {assigned_col_id} = {{'personsIds': {assigned_ids}}}")
+            persons_and_teams = [{"id": uid, "kind": "person"} for uid in assigned_ids]
+            column_values[assigned_col_id] = {"personsAndTeams": persons_and_teams}
+            print(f"[ASSIGNED] included in create_item: {assigned_col_id} = {{'personsAndTeams': {persons_and_teams}}}")
 
         create_query = """
         mutation ($boardId: ID!, $itemName: String!, $columnVals: JSON!) {
             create_item (board_id: $boardId, item_name: $itemName, column_values: $columnVals) { id }
         }
         """
+        print(f"[SUBMIT] column_values payload: {json.dumps(column_values, indent=2)}")
+        print(f"[SUBMIT] column_values JSON string: {json.dumps(column_values)}")
         gql_vars = {
             "boardId": monday.MAIN_BOARD,
             "itemName": item_name,
