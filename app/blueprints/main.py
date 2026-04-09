@@ -3,8 +3,8 @@ import json
 import traceback
 
 from flask import (
-    Blueprint, render_template, request, redirect,
-    url_for, flash, session, jsonify,
+    Blueprint, request, jsonify, session, redirect,
+    url_for, flash, render_template, send_from_directory, current_app
 )
 from flask_login import login_required, current_user
 
@@ -288,3 +288,22 @@ def search_linked_items():
         print(f"[SEARCH] Unexpected error: {e}")
         traceback.print_exc()
         return jsonify({"results": [], "error": str(e)})
+
+
+# ── PWA assets ────────────────────────────────────────────────────────────────
+
+@main_bp.route("/sw.js")
+def service_worker():
+    """Serve Service Worker from root scope so it can control the whole app."""
+    resp = send_from_directory(current_app.static_folder, "sw.js",
+                               mimetype="application/javascript",
+                               max_age=0)
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
+
+
+@main_bp.route("/manifest.webmanifest")
+def web_manifest():
+    """Serve Web App Manifest for PWA installability."""
+    return send_from_directory(current_app.static_folder, "manifest.webmanifest",
+                               mimetype="application/manifest+json")
