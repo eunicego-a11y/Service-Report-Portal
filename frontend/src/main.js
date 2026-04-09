@@ -122,6 +122,17 @@ async function refreshNetworkBadge() {
   if (!badge) return;
   const pending = await getPendingSubmissions();
   const isOnline = navigator.onLine;
+
+  // Hide/show online-only fields
+  const onlineOnlyFields = ["field-wrap-linked", "field-wrap-assigned"];
+  for (const id of onlineOnlyFields) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isOnline ? "" : "none";
+  }
+  // Also toggle required on the linked_item_id select so offline saves don't block
+  const linkedSelect = document.getElementById("field-linked");
+  if (linkedSelect) linkedSelect.required = isOnline;
+
   if (!isOnline) {
     badge.className = "badge bg-danger me-2";
     badge.textContent =
