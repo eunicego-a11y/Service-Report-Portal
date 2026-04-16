@@ -79,6 +79,62 @@ def upload_file(item_id: str, column_id: str, file_data: bytes, filename: str, a
         return False, str(e)
 
 
+# ---------------------------------------------------------------------------
+# Email → Monday.com user ID resolution
+# ---------------------------------------------------------------------------
+
+# In-process cache: lowercase email → Monday user ID (int)
+_email_to_id_cache: dict[str, int] = {}
+
+
+def resolve_users_by_email(emails: list[str]) -> list[int]:
+    """Return Monday.com user IDs matching the given email addresses.
+
+    Fetches workspace users once and caches results for the process lifetime.
+    Emails that don't match any workspace user are silently ignored (logged).
+    Supports comma-separated emails passed as a single string element in the list.
+    """
+    global _email_to_id_cache
+
+    # Flatten any comma-separated values and normalise
+    normalised: list[str] = []
+    for entry in emails:
+        for e in entry.split(","):
+            clean = e.strip().lower()
+            if clean:
+                normalised.append(clean)
+
+    if not normalised:
+        return []
+
+    # Populate cache on first call
+    if not _email_to_id_cache:
+        try:
+            res = graphql("{ users { id email } }")
+            raw = (res or {}).get("data", {}).get("users") or []
+            _email_to_id_cache = {
+                u.get("email", "").lower(): int(u["id"])
+                for u in raw
+                if u.get("email") and u.get("id")
+            }
+            print(f"[WORKWITH] Cached {len(_email_to_id_cache)} workspace users from Monday.com")
+        except Exception as exc:
+            print(f"[WORKWITH] Failed to fetch workspace users: {exc}")
+            return []
+
+    result: list[int] = []
+    for email in normalised:
+        uid = _email_to_id_cache.get(email)
+        if uid:
+            result.append(uid)
+            print(f"[WORKWITH] Resolved {email!r} → user_id={uid}")
+        else:
+            print(f"[WORKWITH] No Monday.com user found for email: {email!r}")
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Column IDs whose types are ambiguous (e.g. start with "signature" but store email).
 # Maps column_id → forced type string.
 _COLUMN_TYPE_OVERRIDES: dict[str, str] = {}
@@ -163,10 +219,15 @@ def format_column_value(col_id: str, value) -> dict | str | None:
             time_part = parts[1] if len(parts) > 1 else "00:00:00"
         return {"date": date_part, "time": time_part}
 
-    # Date only → {"date": "YYYY-MM-DD"}
+    # Date / datetime — include time component when present
     if "date" in col_lower:
         if "T" in val_str:
-            val_str = val_str.split("T")[0]
+            date_part, time_part = val_str.split("T", 1)
+            if time_part and time_part != "00:00":
+                if time_part.count(":") == 1:
+                    time_part += ":00"
+                return {"date": date_part, "time": time_part}
+            return {"date": date_part}
         return {"date": val_str}
 
     # Long text → {"text": "content"}

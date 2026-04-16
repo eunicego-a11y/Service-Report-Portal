@@ -53,13 +53,24 @@ def submit():
             flash("Item name is required.", "error")
             return _submit_response(False, "Item name is required.")
 
-        # ── Extract TSP WORKWITH email ─────────────────────────────────
+        # ── Extract TSP WORKWITH email and resolve to Monday people IDs ────────
         tsp_workwith_email = request.form.get("tsp_workwith", "").strip()
-        print(f"[WORKWITH] email: {tsp_workwith_email!r}")
+        print(f"[WORKWITH] raw email input: {tsp_workwith_email!r}")
+
+        # Resolve email(s) to Monday.com user IDs for the people column
+        workwith_person_ids: list[int] = []
+        if tsp_workwith_email:
+            workwith_person_ids = monday.resolve_users_by_email(
+                [e.strip() for e in tsp_workwith_email.split(",") if e.strip()]
+            )
+            if not workwith_person_ids:
+                print(f"[WORKWITH] No matching Monday users — people column will be left unset")
 
         form_data = {
             "COL_EMAIL": request.form.get("email"),
-            "COL_TSP_WORKWITH_EMAIL": tsp_workwith_email or None,
+            # COL_TSP_WORKWITH is a people column — populated below after email resolution
+            # (kept here as None so it flows through format_column_value with resolved IDs)
+            "COL_TSP_WORKWITH": workwith_person_ids if workwith_person_ids else None,
             "COL_SERVICE_START": request.form.get("service_start"),
             "COL_SERVICE_END": request.form.get("service_end"),
             "COL_LOGIN_DATE": request.form.get("login_date"),
@@ -79,9 +90,19 @@ def submit():
             "COL_SOFTWARE_VERSION": request.form.get("software_version"),
         }
 
-        # Track creating user
-        if current_user.is_authenticated and os.getenv("COL_CREATED_BY"):
-            form_data["COL_CREATED_BY"] = current_user.name
+        # Track creating user: resolve Service Email (TSP) to a Monday people ID — same pattern as WORKWITH.
+        if os.getenv("COL_CREATED_BY"):
+            tsp_email = (request.form.get("email") or "").strip()
+            print(f"[CREATED_BY] Service Email (TSP) from form: {tsp_email!r}")
+            created_by_person_ids: list[int] = []
+            if tsp_email:
+                created_by_person_ids = monday.resolve_users_by_email([tsp_email])
+                print(f"[CREATED_BY] resolve_users_by_email result: {created_by_person_ids}")
+            if created_by_person_ids:
+                form_data["COL_CREATED_BY"] = created_by_person_ids
+                print(f"[CREATED_BY] Assigning person_ids={created_by_person_ids}")
+            else:
+                print(f"[CREATED_BY] No Monday user found for {tsp_email!r} — column will be left unset")
 
         # Build column_values dict (people column handled separately below)
         column_values = {}
@@ -93,9 +114,9 @@ def submit():
             if formatted is not None:
                 column_values[col_id] = formatted
 
-        # TSP WORKWITH is now a plain email — if COL_TSP_WORKWITH maps to a
-        # text column it will be set via format_column_value above (COL_TSP_WORKWITH_EMAIL).
-        # If it's still a people column then it stays unset (email can't resolve to a person ID).
+        # TSP WORKWITH: the people column (COL_TSP_WORKWITH) has been set above via
+        # resolve_users_by_email() → personsAndTeams JSON, handled by format_column_value().
+        # If no Monday user matched the email, the column is simply left unset.
 
         create_query = """
         mutation ($boardId: ID!, $itemName: String!, $columnVals: JSON!) {
