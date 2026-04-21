@@ -66,13 +66,24 @@ def submit():
             if not workwith_person_ids:
                 print(f"[WORKWITH] No matching Monday users — people column will be left unset")
 
+        # ── Extract Service TSP Email and resolve to Monday people IDs for COL_CREATED_BY ────────
+        tsp_email = request.form.get("tsp_email", "").strip()
+        print(f"[CREATED_BY] Service TSP Email from form: {tsp_email!r}")
+
+        created_by_person_ids: list[int] = []
+        if tsp_email:
+            created_by_person_ids = monday.resolve_users_by_email([tsp_email])
+            if not created_by_person_ids:
+                print(f"[CREATED_BY] No matching Monday users — people column will be left unset")
+
         local_timezone = request.form.get("local_timezone")
 
         form_data = {
-            "COL_EMAIL": request.form.get("email"),
             # COL_TSP_WORKWITH is a people column — populated below after email resolution
             # (kept here as None so it flows through format_column_value with resolved IDs)
             "COL_TSP_WORKWITH": workwith_person_ids if workwith_person_ids else None,
+            # COL_CREATED_BY is a people column - populated from Service TSP Email resolution
+            "COL_CREATED_BY": created_by_person_ids if created_by_person_ids else None,
             "COL_SERVICE_START": request.form.get("service_start"),
             "COL_SERVICE_END": request.form.get("service_end"),
             "COL_LOGIN_DATE": request.form.get("login_date"),
@@ -91,20 +102,6 @@ def submit():
             "COL_CUSTOMER_EMAIL": request.form.get("customer_email"),
             "COL_SOFTWARE_VERSION": request.form.get("software_version"),
         }
-
-        # Track creating user: resolve Service Email (TSP) to a Monday people ID — same pattern as WORKWITH.
-        if os.getenv("COL_CREATED_BY"):
-            tsp_email = (request.form.get("email") or "").strip()
-            print(f"[CREATED_BY] Service Email (TSP) from form: {tsp_email!r}")
-            created_by_person_ids: list[int] = []
-            if tsp_email:
-                created_by_person_ids = monday.resolve_users_by_email([tsp_email])
-                print(f"[CREATED_BY] resolve_users_by_email result: {created_by_person_ids}")
-            if created_by_person_ids:
-                form_data["COL_CREATED_BY"] = created_by_person_ids
-                print(f"[CREATED_BY] Assigning person_ids={created_by_person_ids}")
-            else:
-                print(f"[CREATED_BY] No Monday user found for {tsp_email!r} — column will be left unset")
 
         # Build column_values dict (people column handled separately below)
         column_values = {}

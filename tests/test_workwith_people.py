@@ -177,7 +177,7 @@ class TestSubmitCreatedBy(unittest.TestCase):
             method='POST',
             data={
                 'name': 'Test Item',
-                'email': 'service@example.com',
+                'tsp_email': 'service@example.com',
                 'tsp_workwith': '',
             },
             headers={'X-Requested-With': 'XMLHttpRequest'},

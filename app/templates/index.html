@@ -49,7 +49,12 @@
     {# ══════════════════ MAIN FORM ══════════════════ #}
     <div class="col-lg-8">
       <form id="mainForm" novalidate>
-        <input type="hidden" id="local-timezone" name="local_timezone" value="" />
+        <input
+          type="hidden"
+          id="local-timezone"
+          name="local_timezone"
+          value=""
+        />
         {# 1 · Basic Information #}
         <div class="form-card">
           <div class="form-card-header">
@@ -85,13 +90,13 @@
           <div class="form-card-body">
             <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label" for="field-email"
-                  >Service Email (TSP) <span class="text-danger">*</span></label
+                <label class="form-label" for="field-tsp-email"
+                  >Service TSP Email <span class="text-danger">*</span></label
                 >
                 <input
                   type="email"
-                  id="field-email"
-                  name="email"
+                  id="field-tsp-email"
+                  name="tsp_email"
                   class="form-control"
                   placeholder="service@mcbtsi.com"
                   required
