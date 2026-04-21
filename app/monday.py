@@ -197,10 +197,18 @@ def format_column_value(col_id: str, value, time_zone: str | None = None) -> dic
     # Multiple person / people column
     if "multiple_person" in col_lower or "person" in col_lower:
         try:
-            if isinstance(value, list):
+            ids = []
+            if isinstance(value, str) and "@" in value:
+                ids = resolve_users_by_email([value])
+                if not ids:
+                    return None
+            elif isinstance(value, list):
                 ids = [int(v) for v in value]
             else:
                 ids = [int(value)]
+
+            if not ids:
+                return None
             return {"personsAndTeams": [{"id": uid, "kind": "person"} for uid in ids]}
         except (ValueError, TypeError):
             return None

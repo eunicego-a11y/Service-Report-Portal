@@ -161,6 +161,10 @@ class TestFormatColumnValuePeopleColumn(unittest.TestCase):
 
 class TestSubmitCreatedBy(unittest.TestCase):
 
+    def setUp(self):
+        import app.monday as m
+        self.m = m
+
     def test_submit_assigns_created_by_column(self):
         import app.blueprints.main as main
         from app import create_app
@@ -199,6 +203,17 @@ class TestSubmitCreatedBy(unittest.TestCase):
             self.assertIn('multiple_person_mm24g2nr', variables['columnVals'])
             self.assertTrue(response.get_json().get('success'))
             self.assertEqual(response.get_json().get('item_id'), '999')
+
+    def test_person_column_email_address_is_resolved(self):
+        with patch.object(self.m, "resolve_users_by_email", return_value=[111]) as mock_resolve:
+            result = self.m.format_column_value("multiple_person_mks8jn7f", "alice@example.com")
+
+        mock_resolve.assert_called_once_with(["alice@example.com"])
+        self.assertEqual(result, {
+            'personsAndTeams': [
+                {'id': 111, 'kind': 'person'},
+            ]
+        })
 
     def test_created_by_people_column_serializes_personsAndTeams(self):
         import app.monday as m
